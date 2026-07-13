@@ -1,18 +1,42 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router';
-import * as SplashScreen from 'expo-splash-screen';
-import { useColorScheme } from 'react-native';
+import BottomBar from "@/components/BottomBar";
+import { MealProvider } from "@/context/meal-context";
+import { Tabs } from "expo-router";
 
-import { AnimatedSplashOverlay } from '@/components/animated-icon';
-import AppTabs from '@/components/app-tabs';
 
-SplashScreen.preventAutoHideAsync();
+import "../../global.css";
+
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <AnimatedSplashOverlay />
-      <AppTabs />
-    </ThemeProvider>
+    <MealProvider>
+      <Tabs
+        tabBar={(props) => <BottomBar {...props} />}
+        screenOptions={{
+          headerShown: false,
+          sceneStyle: {
+            backgroundColor: "#050607",
+          },
+          tabBarStyle: {
+            backgroundColor: "#050607",
+          },
+          tabBarHideOnKeyboard: true,
+          animation: "none",
+        }}
+      >
+        <Tabs.Screen
+          name="index"
+          options={{
+            title: "Home",
+          }}
+        />
+
+        <Tabs.Screen
+          name="explore"
+          options={{
+            title: "Tracker",
+          }}
+        />
+      </Tabs>
+    </MealProvider>
   );
 }
