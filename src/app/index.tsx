@@ -17,6 +17,7 @@ export default function DashboardScreen() {
     totalExpense,
     mealPrice,
     toggleMeal,
+    isMonthCleared,
   } = useDashboard();
 
   return (
@@ -83,7 +84,15 @@ export default function DashboardScreen() {
           This Month
         </Text>
 
-        <View className="flex-row gap-3">
+        {isMonthCleared ? (
+          <View className="mb-4 rounded-2xl border border-dashed px-4 py-3" style={{ borderColor: COLORS.border, backgroundColor: COLORS.surface }}>
+            <Text className="text-sm" style={{ color: COLORS.textSecondary }}>
+              This month has been marked as cleared, so its meal summary is hidden from the dashboard.
+            </Text>
+          </View>
+        ) : (
+          <View>
+            <View className="flex-row gap-3">
           <StatCard
             label="Total Meals"
             value={String(totalMeals)}
@@ -98,14 +107,16 @@ export default function DashboardScreen() {
           />
         </View>
 
-        <View className="mt-3">
-          <StatCard
-            label="Meal Price"
-            value={`৳${mealPrice}`}
-            subtitle="Per meal · change in Settings"
-            icon={CircleDollarSign}
-          />
-        </View>
+            <View className="mt-3">
+              <StatCard
+                label="Meal Price"
+                value={`৳${mealPrice}`}
+                subtitle="Per meal · change in Settings"
+                icon={CircleDollarSign}
+              />
+            </View>
+          </View>
+        )}
       </ScrollView>
     </SafeAreaView>
   );

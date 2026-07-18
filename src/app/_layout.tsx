@@ -36,6 +36,12 @@ export default function TabLayout() {
             title: "Tracker",
           }}
         />
+        <Tabs.Screen
+          name="persistence"
+          options={{
+            title: "Settings",
+          }}
+        />
       </Tabs>
     </MealProvider>
   );

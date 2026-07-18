@@ -1,9 +1,10 @@
 import { StatusBar } from "expo-status-bar";
-import { Utensils, Wallet } from "lucide-react-native";
-import { useEffect, useRef } from "react";
-import { FlatList, Text, View } from "react-native";
+import { ChevronLeft, ChevronRight, Utensils, Wallet } from "lucide-react-native";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { FlatList, Pressable, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import DueClearModal from "@/components/tracker/DueClearModal";
 import MealTableHeader from "@/components/tracker/MealTableHeader";
 import MealTableRow from "@/components/tracker/MealTableRow";
 import { COLORS } from "@/constants/meal";
@@ -17,10 +18,18 @@ export default function MonthlyTrackerScreen() {
     totalMeals,
     totalExpense,
     toggleMeal,
+    activeMonthKey,
+    isCurrentMonth,
+    isMonthCleared,
+    goToPreviousMonth,
+    goToNextMonth,
+    clearDueForCurrentMonth,
   } = useMealStore();
 
   const listRef = useRef<FlatList<MonthDayRow>>(null);
+  const [dueModalVisible, setDueModalVisible] = useState(false);
   const todayIndex = monthDays.findIndex((row) => row.isToday);
+  const monthTitle = useMemo(() => monthLabel, [monthLabel]);
 
   useEffect(() => {
     if (todayIndex < 0) {
@@ -56,9 +65,39 @@ export default function MonthlyTrackerScreen() {
         >
           Monthly Tracker
         </Text>
-        <Text className="mt-1 text-base" style={{ color: COLORS.textSecondary }}>
-          {monthLabel}
-        </Text>
+        <View className="mt-2 flex-row items-center justify-between">
+          <Text className="text-base" style={{ color: COLORS.textSecondary }}>
+            {monthTitle}
+          </Text>
+          <View className="flex-row items-center gap-2">
+            <Pressable
+              onPress={goToPreviousMonth}
+              className="h-9 w-9 items-center justify-center rounded-full border"
+              style={{ borderColor: COLORS.border, backgroundColor: COLORS.surface }}
+            >
+              <ChevronLeft size={18} color={COLORS.text} />
+            </Pressable>
+            <Pressable
+              onPress={goToNextMonth}
+              className="h-9 w-9 items-center justify-center rounded-full border"
+              style={{ borderColor: COLORS.border, backgroundColor: COLORS.surface }}
+            >
+              <ChevronRight size={18} color={COLORS.text} />
+            </Pressable>
+          </View>
+        </View>
+
+        {!isCurrentMonth && !isMonthCleared ? (
+          <Pressable
+            onPress={() => setDueModalVisible(true)}
+            className="mt-3 rounded-2xl border px-3 py-2"
+            style={{ borderColor: COLORS.border, backgroundColor: COLORS.surface }}
+          >
+            <Text className="text-sm font-medium" style={{ color: COLORS.accent }}>
+              Due Clear
+            </Text>
+          </Pressable>
+        ) : null}
 
         <View className="mt-4 flex-row gap-3">
           <View
@@ -128,6 +167,16 @@ export default function MonthlyTrackerScreen() {
           }}
         />
       </View>
+
+      <DueClearModal
+        visible={dueModalVisible}
+        monthLabel={monthTitle}
+        onClose={() => setDueModalVisible(false)}
+        onConfirm={async () => {
+          await clearDueForCurrentMonth();
+          setDueModalVisible(false);
+        }}
+      />
     </SafeAreaView>
   );
 }

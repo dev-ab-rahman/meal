@@ -21,6 +21,14 @@ async function openDatabase() {
   return dbPromise;
 }
 
+async function ensureClearedMonthsTable(db: SQLite.SQLiteDatabase) {
+  await db.execAsync(`
+    CREATE TABLE IF NOT EXISTS cleared_months (
+      month_key TEXT PRIMARY KEY NOT NULL
+    );
+  `);
+}
+
 export async function initMealDatabase() {
   try {
     const db = await openDatabase();
@@ -38,6 +46,8 @@ export async function initMealDatabase() {
     await db.execAsync(`
       ALTER TABLE meal_records ADD COLUMN guest_count INTEGER NOT NULL DEFAULT 0;
     `);
+
+    await ensureClearedMonthsTable(db);
   } catch (error) {
     if (error instanceof Error && /duplicate column name|already exists/i.test(error.message)) {
       console.warn("Guest column already present in meal database");
@@ -135,6 +145,41 @@ export async function deleteMealRecord(dateKey: string) {
     await db.runAsync(`DELETE FROM meal_records WHERE date_key = ?;`, [dateKey]);
   } catch (error) {
     console.warn("Failed to delete meal record", error);
+  }
+}
+
+export async function markMonthAsCleared(monthKey: string) {
+  try {
+    const db = await openDatabase();
+    await db.runAsync(
+      `INSERT INTO cleared_months (month_key) VALUES (?) ON CONFLICT(month_key) DO NOTHING;`,
+      [monthKey],
+    );
+  } catch (error) {
+    console.warn("Failed to mark month as cleared", error);
+  }
+}
+
+export async function isMonthCleared(monthKey: string): Promise<boolean> {
+  try {
+    const db = await openDatabase();
+    const row = await db.getFirstAsync<{ month_key: string }>(
+      `SELECT month_key FROM cleared_months WHERE month_key = ?;`,
+      [monthKey],
+    );
+    return Boolean(row);
+  } catch (error) {
+    console.warn("Failed to check cleared month", error);
+    return false;
+  }
+}
+
+export async function unmarkMonthAsCleared(monthKey: string) {
+  try {
+    const db = await openDatabase();
+    await db.runAsync(`DELETE FROM cleared_months WHERE month_key = ?;`, [monthKey]);
+  } catch (error) {
+    console.warn("Failed to unmark cleared month", error);
   }
 }
 

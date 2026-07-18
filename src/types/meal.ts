@@ -11,6 +11,10 @@ export type MonthSummary = {
   totalExpense: number;
 };
 
+export type ClearedMonth = {
+  monthKey: string;
+};
+
 export type MonthDayRow = {
   key: string;
   date: Date;

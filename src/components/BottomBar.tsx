@@ -1,7 +1,8 @@
 import type { BottomTabBarProps } from "expo-router/build/react-navigation/bottom-tabs";
 import {
-    CalendarDays,
-    House,
+  CalendarDays,
+  House,
+  Settings,
 } from "lucide-react-native";
 import { MotiView } from "moti";
 import { Pressable, Text, View } from "react-native";
@@ -14,6 +15,7 @@ const BORDER = "#1C1F22";
 const ICONS = {
   index: House,
   explore: CalendarDays,
+  persistence: Settings,
 };
 
 export default function BottomBar({

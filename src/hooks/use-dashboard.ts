@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 
-import { countMeals } from "@/lib/meal-utils";
 import { useMealStore } from "@/context/meal-context";
+import { countMeals } from "@/lib/meal-utils";
 import type { MealSlot } from "@/types/meal";
 
 export function useDashboard() {
@@ -13,6 +13,7 @@ export function useDashboard() {
     totalMeals,
     totalExpense,
     mealPrice,
+    isMonthCleared,
   } = useMealStore();
 
   const todayMeals = getMeals(todayKey);
@@ -29,6 +30,7 @@ export function useDashboard() {
     totalMeals,
     totalExpense,
     mealPrice,
+    isMonthCleared,
     toggleMeal: toggleTodayMeal,
   };
 }

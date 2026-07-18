@@ -10,9 +10,11 @@ import {
 
 import { DEFAULT_MEAL_PRICE } from "@/constants/meal";
 import {
+  isMonthCleared as checkMonthCleared,
   deleteMealRecord,
   initMealDatabase,
   loadMealRecords,
+  markMonthAsCleared,
   saveMealRecord,
 } from "@/lib/meal-db";
 import {
@@ -21,6 +23,7 @@ import {
   dateKey,
   formatMonthYear,
   formatTodayDate,
+  getMonthKey,
   isFutureDay,
   parseDateKey,
   toggleMealSlot,
@@ -37,9 +40,15 @@ type MealContextValue = {
   totalExpense: number;
   formattedToday: string;
   monthLabel: string;
+  activeMonthKey: string;
+  isCurrentMonth: boolean;
+  isMonthCleared: boolean;
   getMeals: (key: string) => DayMeals;
   toggleMeal: (key: string, slot: MealSlot) => void;
   setGuestCount: (key: string, guestCount: number) => void;
+  goToPreviousMonth: () => void;
+  goToNextMonth: () => void;
+  clearDueForCurrentMonth: () => Promise<void>;
 };
 
 const MealContext = createContext<MealContextValue | null>(null);
@@ -53,7 +62,9 @@ function createInitialRecords(today: Date): Record<string, DayMeals & { guestCou
 }
 
 export function MealProvider({ children }: { children: ReactNode }) {
-  const today = useMemo(() => new Date(), []);
+  const [today, setToday] = useState(() => new Date());
+  const [activeMonthKey, setActiveMonthKey] = useState(() => getMonthKey(new Date()));
+  const [isMonthCleared, setIsMonthCleared] = useState(false);
   const todayKey = dateKey(today);
   const [records, setRecords] = useState(() => createInitialRecords(today));
   const [mealPrice] = useState(DEFAULT_MEAL_PRICE);
@@ -65,9 +76,11 @@ export function MealProvider({ children }: { children: ReactNode }) {
       try {
         await initMealDatabase();
         const loadedRecords = await loadMealRecords();
+        const cleared = await checkMonthCleared(activeMonthKey);
 
         if (active) {
           setRecords(() => loadedRecords);
+          setIsMonthCleared(cleared);
         }
       } catch (error) {
         console.warn("Failed to load persisted meal records", error);
@@ -82,17 +95,28 @@ export function MealProvider({ children }: { children: ReactNode }) {
     return () => {
       active = false;
     };
-  }, [today]);
+  }, [activeMonthKey, today]);
+
+  const monthRecords = useMemo(() => {
+    return Object.entries(records).reduce<Record<string, DayMeals & { guestCount?: number }>>((acc, [key, value]) => {
+      if (key.startsWith(activeMonthKey)) {
+        acc[key] = value;
+      }
+      return acc;
+    }, {});
+  }, [activeMonthKey, records]);
 
   const monthDays = useMemo(
-    () => buildMonthRows(today, records),
-    [today, records],
+    () => buildMonthRows(today, monthRecords),
+    [today, monthRecords],
   );
 
   const totalMeals = useMemo(
     () => monthDays.reduce((sum, row) => sum + row.mealCount, 0),
     [monthDays],
   );
+
+  const isCurrentMonth = useMemo(() => activeMonthKey === getMonthKey(today), [activeMonthKey, today]);
 
   const totalExpense = totalMeals * mealPrice;
 
@@ -106,6 +130,27 @@ export function MealProvider({ children }: { children: ReactNode }) {
 
     void saveMealRecord(key, dayMeals, guestCount);
   }, []);
+
+  const goToPreviousMonth = useCallback(() => {
+    setToday((current) => {
+      const previous = new Date(current.getFullYear(), current.getMonth() - 1, 1);
+      setActiveMonthKey(getMonthKey(previous));
+      return previous;
+    });
+  }, []);
+
+  const goToNextMonth = useCallback(() => {
+    setToday((current) => {
+      const next = new Date(current.getFullYear(), current.getMonth() + 1, 1);
+      setActiveMonthKey(getMonthKey(next));
+      return next;
+    });
+  }, []);
+
+  const clearDueForCurrentMonth = useCallback(async () => {
+    await markMonthAsCleared(activeMonthKey);
+    setIsMonthCleared(true);
+  }, [activeMonthKey]);
 
   const getMeals = useCallback(
     (key: string) => records[key] ?? createEmptyDayMeals(),
@@ -175,9 +220,15 @@ export function MealProvider({ children }: { children: ReactNode }) {
       totalExpense,
       formattedToday: formatTodayDate(today),
       monthLabel: formatMonthYear(today),
+      activeMonthKey,
+      isCurrentMonth,
+      isMonthCleared,
       getMeals,
       toggleMeal,
       setGuestCount,
+      goToPreviousMonth,
+      goToNextMonth,
+      clearDueForCurrentMonth,
     }),
     [
       today,
@@ -191,6 +242,12 @@ export function MealProvider({ children }: { children: ReactNode }) {
       toggleMeal,
       setGuestCount,
       persistDayRecord,
+      goToPreviousMonth,
+      goToNextMonth,
+      clearDueForCurrentMonth,
+      activeMonthKey,
+      isCurrentMonth,
+      isMonthCleared,
     ],
   );
 
