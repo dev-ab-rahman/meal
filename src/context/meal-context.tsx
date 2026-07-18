@@ -2,6 +2,7 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useState,
   type ReactNode,
@@ -9,10 +10,14 @@ import {
 
 import { DEFAULT_MEAL_PRICE } from "@/constants/meal";
 import {
+  deleteMealRecord,
+  initMealDatabase,
+  loadMealRecords,
+  saveMealRecord,
+} from "@/lib/meal-db";
+import {
   buildMonthRows,
-  countMeals,
   createEmptyDayMeals,
-  createMonthSeed,
   dateKey,
   formatMonthYear,
   formatTodayDate,
@@ -26,7 +31,7 @@ type MealContextValue = {
   today: Date;
   todayKey: string;
   mealPrice: number;
-  records: Record<string, DayMeals>;
+  records: Record<string, DayMeals & { guestCount?: number }>;
   monthDays: MonthDayRow[];
   totalMeals: number;
   totalExpense: number;
@@ -34,17 +39,16 @@ type MealContextValue = {
   monthLabel: string;
   getMeals: (key: string) => DayMeals;
   toggleMeal: (key: string, slot: MealSlot) => void;
+  setGuestCount: (key: string, guestCount: number) => void;
 };
 
 const MealContext = createContext<MealContextValue | null>(null);
 
-function createInitialRecords(today: Date): Record<string, DayMeals> {
-  const seed = createMonthSeed(today);
+function createInitialRecords(today: Date): Record<string, DayMeals & { guestCount?: number }> {
   const todayK = dateKey(today);
 
   return {
-    ...seed,
-    [todayK]: seed[todayK] ?? createEmptyDayMeals(),
+    [todayK]: createEmptyDayMeals(),
   };
 }
 
@@ -53,6 +57,32 @@ export function MealProvider({ children }: { children: ReactNode }) {
   const todayKey = dateKey(today);
   const [records, setRecords] = useState(() => createInitialRecords(today));
   const [mealPrice] = useState(DEFAULT_MEAL_PRICE);
+
+  useEffect(() => {
+    let active = true;
+
+    const loadPersistedRecords = async () => {
+      try {
+        await initMealDatabase();
+        const loadedRecords = await loadMealRecords();
+
+        if (active) {
+          setRecords(() => loadedRecords);
+        }
+      } catch (error) {
+        console.warn("Failed to load persisted meal records", error);
+        if (active) {
+          setRecords(() => createInitialRecords(today));
+        }
+      }
+    };
+
+    void loadPersistedRecords();
+
+    return () => {
+      active = false;
+    };
+  }, [today]);
 
   const monthDays = useMemo(
     () => buildMonthRows(today, records),
@@ -66,9 +96,45 @@ export function MealProvider({ children }: { children: ReactNode }) {
 
   const totalExpense = totalMeals * mealPrice;
 
+  const persistDayRecord = useCallback((key: string, dayMeals: DayMeals, guestCount: number) => {
+    const hasMeals = Object.values(dayMeals).some(Boolean);
+
+    if (!hasMeals && guestCount <= 0) {
+      void deleteMealRecord(key);
+      return;
+    }
+
+    void saveMealRecord(key, dayMeals, guestCount);
+  }, []);
+
   const getMeals = useCallback(
     (key: string) => records[key] ?? createEmptyDayMeals(),
     [records],
+  );
+
+  const setGuestCount = useCallback(
+    (key: string, guestCount: number) => {
+      const rowDate = parseDateKey(key);
+      if (isFutureDay(rowDate, today)) {
+        return;
+      }
+
+      setRecords((current) => {
+        const dayMeals = current[key] ?? createEmptyDayMeals();
+        const nextEntry = {
+          ...dayMeals,
+          guestCount,
+        } as DayMeals & { guestCount: number };
+
+        persistDayRecord(key, dayMeals, guestCount);
+
+        return {
+          ...current,
+          [key]: nextEntry,
+        };
+      });
+    },
+    [today],
   );
 
   const toggleMeal = useCallback(
@@ -80,9 +146,18 @@ export function MealProvider({ children }: { children: ReactNode }) {
 
       setRecords((current) => {
         const dayMeals = current[key] ?? createEmptyDayMeals();
+        const existingGuestCount = current[key]?.guestCount ?? 0;
+        const nextMeals = toggleMealSlot(dayMeals, slot);
+        const nextEntry = {
+          ...nextMeals,
+          guestCount: existingGuestCount,
+        } as DayMeals & { guestCount: number };
+
+        persistDayRecord(key, nextMeals, existingGuestCount);
+
         return {
           ...current,
-          [key]: toggleMealSlot(dayMeals, slot),
+          [key]: nextEntry,
         };
       });
     },
@@ -102,6 +177,7 @@ export function MealProvider({ children }: { children: ReactNode }) {
       monthLabel: formatMonthYear(today),
       getMeals,
       toggleMeal,
+      setGuestCount,
     }),
     [
       today,
@@ -113,6 +189,8 @@ export function MealProvider({ children }: { children: ReactNode }) {
       totalExpense,
       getMeals,
       toggleMeal,
+      setGuestCount,
+      persistDayRecord,
     ],
   );
 

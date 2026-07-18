@@ -4,7 +4,9 @@
   "version": "1.0.0",
   "dependencies": {
     "@expo/ui": "~57.0.4",
+    "@react-native-async-storage/async-storage": "^1.20.1",
     "@react-navigation/native": "^7.3.8",
+    "@types/node": "^26.1.1",
     "babel-preset-expo": "^57.0.2",
     "expo": "~57.0.4",
     "expo-constants": "~57.0.3",
@@ -15,10 +17,10 @@
     "expo-linking": "~57.0.2",
     "expo-router": "~57.0.4",
     "expo-splash-screen": "~57.0.2",
+    "expo-sqlite": "^57.0.1",
     "expo-status-bar": "~57.0.0",
     "expo-symbols": "~57.0.0",
     "expo-system-ui": "~57.0.0",
-    "@react-native-async-storage/async-storage": "^1.20.1",
     "expo-web-browser": "~57.0.0",
     "lucide-react-native": "^1.24.0",
     "moti": "^0.30.0",
@@ -37,6 +39,7 @@
   },
   "devDependencies": {
     "@types/react": "~19.2.2",
+    "tsx": "^4.23.1",
     "typescript": "~6.0.3"
   },
   "scripts": {

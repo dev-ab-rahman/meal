@@ -1,7 +1,11 @@
+import { useState } from "react";
 import { Text, View } from "react-native";
 
+import GuestMealCell from "@/components/tracker/GuestMealCell";
+import GuestMealModal from "@/components/tracker/GuestMealModal";
 import MealToggleCell from "@/components/tracker/MealToggleCell";
 import { COLORS, MEAL_SLOTS } from "@/constants/meal";
+import { useMealStore } from "@/context/meal-context";
 import type { MealSlot, MonthDayRow } from "@/types/meal";
 
 type MealTableRowProps = {
@@ -10,6 +14,9 @@ type MealTableRowProps = {
 };
 
 export default function MealTableRow({ row, onToggle }: MealTableRowProps) {
+  const { setGuestCount } = useMealStore();
+  const [modalVisible, setModalVisible] = useState(false);
+
   return (
     <View
       className="flex-row items-center border-b px-3 py-2.5"
@@ -41,12 +48,29 @@ export default function MealTableRow({ row, onToggle }: MealTableRowProps) {
         </View>
       ))}
 
+      <View className="flex-1">
+        <GuestMealCell
+          guestCount={row.guestCount}
+          onPress={() => setModalVisible(true)}
+        />
+      </View>
+
       <Text
         className="flex-1 text-center text-sm font-semibold"
         style={{ color: row.mealCount > 0 ? COLORS.accent : COLORS.muted }}
       >
         {row.mealCount}
       </Text>
+
+      <GuestMealModal
+        visible={modalVisible}
+        guestCount={row.guestCount}
+        onClose={() => setModalVisible(false)}
+        onSave={(count) => {
+          setGuestCount(row.key, count);
+          setModalVisible(false);
+        }}
+      />
     </View>
   );
 }

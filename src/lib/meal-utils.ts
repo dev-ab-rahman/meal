@@ -72,14 +72,18 @@ export function parseDateKey(key: string): Date {
 
 export function buildMonthRows(
   today: Date,
-  records: Record<string, DayMeals>,
+  records: Record<string, DayMeals & { guestCount?: number }>,
 ): MonthDayRow[] {
   const year = today.getFullYear();
   const month = today.getMonth();
 
   return getDaysInMonth(year, month).map((date) => {
     const key = dateKey(date);
-    const meals = records[key] ?? createEmptyDayMeals();
+    const record = records[key] ?? createEmptyDayMeals();
+    const meals = record as DayMeals;
+    const guestCount = typeof (record as DayMeals & { guestCount?: number }).guestCount === "number"
+      ? (record as DayMeals & { guestCount?: number }).guestCount ?? 0
+      : 0;
 
     return {
       key,
@@ -87,7 +91,8 @@ export function buildMonthRows(
       day: date.getDate(),
       weekday: getWeekdayShort(date),
       meals,
-      mealCount: countMeals(meals),
+      guestCount,
+      mealCount: countMeals(meals) + guestCount,
       isToday: isSameDay(date, today),
       isFuture: isFutureDay(date, today),
     };

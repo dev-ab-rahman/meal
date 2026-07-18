@@ -2,7 +2,7 @@ import { Text, View } from "react-native";
 
 import { COLORS } from "@/constants/meal";
 
-const COLUMNS = ["Day", "B", "L", "D", "Total"] as const;
+const COLUMNS = ["Day", "B", "L", "D", "G", "Total"] as const;
 
 export default function MealTableHeader() {
   return (
