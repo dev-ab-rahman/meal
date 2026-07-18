@@ -18,7 +18,24 @@ export default function DashboardScreen() {
     mealPrice,
     toggleMeal,
     isMonthCleared,
+    activeMonthKey,
+    monthLabel,
+    clearedMonths,
   } = useDashboard();
+
+  const monthCards = Array.from(new Set([activeMonthKey, ...clearedMonths])).map((monthKey) => {
+    const [year, month] = monthKey.split("-").map(Number);
+    const label = new Date(year, month - 1, 1).toLocaleDateString("en-US", {
+      month: "long",
+      year: "numeric",
+    });
+
+    return {
+      key: monthKey,
+      label,
+      status: clearedMonths.includes(monthKey) ? "Paid" : monthKey === activeMonthKey ? "Pending" : "Pending",
+    };
+  });
 
   return (
     <SafeAreaView
@@ -93,19 +110,19 @@ export default function DashboardScreen() {
         ) : (
           <View>
             <View className="flex-row gap-3">
-          <StatCard
-            label="Total Meals"
-            value={String(totalMeals)}
-            subtitle="Current month"
-            icon={Utensils}
-          />
-          <StatCard
-            label="Total Expense"
-            value={`৳${totalExpense}`}
-            subtitle="Auto calculated"
-            icon={Wallet}
-          />
-        </View>
+              <StatCard
+                label="Total Meals"
+                value={String(totalMeals)}
+                subtitle="Current month"
+                icon={Utensils}
+              />
+              <StatCard
+                label="Total Expense"
+                value={`৳${totalExpense}`}
+                subtitle="Auto calculated"
+                icon={Wallet}
+              />
+            </View>
 
             <View className="mt-3">
               <StatCard
@@ -117,6 +134,33 @@ export default function DashboardScreen() {
             </View>
           </View>
         )}
+
+        {monthCards.length > 0 ? (
+          <View className="mt-4 rounded-2xl border px-4 py-3" style={{ borderColor: COLORS.border, backgroundColor: COLORS.surface }}>
+            <Text className="text-sm font-semibold" style={{ color: COLORS.text }}>
+              Monthly cards
+            </Text>
+            <View className="mt-2 gap-2">
+              {monthCards.map((month) => (
+                <View key={month.key} className="flex-row items-center justify-between rounded-xl border px-3 py-2.5" style={{ borderColor: COLORS.border, backgroundColor: COLORS.background }}>
+                  <View>
+                    <Text className="text-sm font-semibold" style={{ color: COLORS.text }}>
+                      {month.label}
+                    </Text>
+                    <Text className="text-xs" style={{ color: COLORS.textSecondary }}>
+                      {month.key === activeMonthKey ? monthLabel : month.label}
+                    </Text>
+                  </View>
+                  <View className="rounded-full px-2.5 py-1" style={{ backgroundColor: month.status === "Paid" ? "rgba(16,185,129,0.16)" : "rgba(245,158,11,0.16)" }}>
+                    <Text className="text-xs font-semibold" style={{ color: month.status === "Paid" ? COLORS.accent : "#f59e0b" }}>
+                      {month.status}
+                    </Text>
+                  </View>
+                </View>
+              ))}
+            </View>
+          </View>
+        ) : null}
       </ScrollView>
     </SafeAreaView>
   );

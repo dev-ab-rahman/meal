@@ -14,6 +14,9 @@ export function useDashboard() {
     totalExpense,
     mealPrice,
     isMonthCleared,
+    activeMonthKey,
+    monthLabel,
+    clearedMonths,
   } = useMealStore();
 
   const todayMeals = getMeals(todayKey);
@@ -31,6 +34,9 @@ export function useDashboard() {
     totalExpense,
     mealPrice,
     isMonthCleared,
+    activeMonthKey,
+    monthLabel,
+    clearedMonths,
     toggleMeal: toggleTodayMeal,
   };
 }

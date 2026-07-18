@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Text, View } from "react-native";
+import { useMemo, useState } from "react";
+import { Alert, Text, View } from "react-native";
 
 import GuestMealCell from "@/components/tracker/GuestMealCell";
 import GuestMealModal from "@/components/tracker/GuestMealModal";
@@ -14,9 +14,51 @@ type MealTableRowProps = {
 };
 
 export default function MealTableRow({ row, onToggle }: MealTableRowProps) {
-  const { setGuestCount, isCurrentMonth } = useMealStore();
+  const { setGuestCount, isCurrentMonth, today } = useMealStore();
   const [modalVisible, setModalVisible] = useState(false);
+  const [editUnlocked, setEditUnlocked] = useState(false);
+  const rowDate = useMemo(() => new Date(row.date), [row.date]);
+  const isPastDay = rowDate < new Date(today.getFullYear(), today.getMonth(), today.getDate());
   const canEdit = isCurrentMonth && row.isToday;
+  const canRequestEdit = isCurrentMonth && !row.isFuture && !row.isToday && isPastDay;
+
+  const requestEdit = (action: "toggle" | "guest", slot?: MealSlot) => {
+    if (canEdit) {
+      return;
+    }
+
+    if (!canRequestEdit) {
+      return;
+    }
+
+    if (editUnlocked) {
+      if (action === "guest") {
+        setModalVisible(true);
+      } else if (slot) {
+        onToggle(row.key, slot);
+      }
+      return;
+    }
+
+    Alert.alert(
+      "Edit past day?",
+      "Do you want to modify this past day?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Yes",
+          onPress: () => {
+            setEditUnlocked(true);
+            if (action === "guest") {
+              setModalVisible(true);
+            } else if (slot) {
+              onToggle(row.key, slot);
+            }
+          },
+        },
+      ],
+    );
+  };
 
   return (
     <View
@@ -43,8 +85,15 @@ export default function MealTableRow({ row, onToggle }: MealTableRowProps) {
           <MealToggleCell
             slot={slot}
             eaten={row.meals[slot]}
-            disabled={row.isFuture || !canEdit}
-            onToggle={() => onToggle(row.key, slot)}
+            disabled={row.isFuture || (!canEdit && !canRequestEdit)}
+            onToggle={() => {
+              if (canEdit) {
+                onToggle(row.key, slot);
+                return;
+              }
+
+              requestEdit("toggle", slot);
+            }}
           />
         </View>
       ))}
@@ -52,8 +101,15 @@ export default function MealTableRow({ row, onToggle }: MealTableRowProps) {
       <View className="flex-1">
         <GuestMealCell
           guestCount={row.guestCount}
-          disabled={!canEdit}
-          onPress={() => setModalVisible(true)}
+          disabled={row.isFuture || (!canEdit && !canRequestEdit)}
+          onPress={() => {
+            if (canEdit) {
+              setModalVisible(true);
+              return;
+            }
+
+            requestEdit("guest");
+          }}
         />
       </View>
 

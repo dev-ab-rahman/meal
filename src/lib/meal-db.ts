@@ -162,6 +162,20 @@ export async function markMonthAsCleared(monthKey: string) {
   }
 }
 
+export async function loadClearedMonths(): Promise<string[]> {
+  try {
+    const db = await openDatabase();
+    const rows = await db.getAllAsync<{ month_key: string }>(
+      `SELECT month_key FROM cleared_months ORDER BY month_key ASC;`,
+    );
+
+    return rows.map((row) => row.month_key);
+  } catch (error) {
+    console.warn("Failed to load cleared months", error);
+    return [];
+  }
+}
+
 export async function isMonthCleared(monthKey: string): Promise<boolean> {
   try {
     const db = await openDatabase();

@@ -1,27 +1,31 @@
 import { COLORS } from "@/constants/meal";
+import { useMealStore } from "@/context/meal-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useState } from "react";
 import {
-    Alert,
-    Button,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    View,
+  Alert,
+  Button,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 const STORAGE_KEY = "persistedNote";
+const MEAL_PRICE_KEY = "meal-price";
 
 export default function PersistenceScreen() {
+  const { mealPrice, setMealPrice } = useMealStore();
   const [text, setText] = useState("");
   const [loaded, setLoaded] = useState<string | null>(null);
+  const [priceInput, setPriceInput] = useState(String(mealPrice));
 
   useEffect(() => {
-    // load on mount
-    loadNote();
+    void loadNote();
+    void loadMealPrice();
   }, []);
 
   async function saveNote() {
@@ -55,12 +59,57 @@ export default function PersistenceScreen() {
     }
   }
 
+  async function loadMealPrice() {
+    try {
+      const saved = await AsyncStorage.getItem(MEAL_PRICE_KEY);
+      if (saved != null) {
+        const parsed = Number(saved);
+        if (!Number.isNaN(parsed)) {
+          setPriceInput(String(parsed));
+          setMealPrice(parsed);
+        }
+      }
+    } catch (e) {
+      Alert.alert("Error", "Failed to load meal price.");
+    }
+  }
+
+  async function saveMealPrice() {
+    try {
+      const parsed = Number(priceInput);
+      if (Number.isNaN(parsed) || parsed < 0) {
+        Alert.alert("Invalid price", "Please enter a valid non-negative price.");
+        return;
+      }
+
+      await AsyncStorage.setItem(MEAL_PRICE_KEY, String(parsed));
+      setMealPrice(parsed);
+      Alert.alert("Saved", "Meal price updated.");
+    } catch (e) {
+      Alert.alert("Error", "Failed to save meal price.");
+    }
+  }
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: COLORS.background }]}>
       <StatusBar style="light" />
 
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={[styles.title, { color: COLORS.text }]}>Data Persistence</Text>
+
+        <Text style={[styles.label, { color: COLORS.textSecondary }]}>Meal rate</Text>
+        <View style={[styles.card, { borderColor: COLORS.border, backgroundColor: COLORS.surface }]}> 
+          <TextInput
+            value={priceInput}
+            onChangeText={setPriceInput}
+            keyboardType="numeric"
+            placeholder="Enter meal price"
+            placeholderTextColor={COLORS.textSecondary}
+            style={[styles.input, { color: COLORS.text, borderColor: COLORS.border, backgroundColor: COLORS.surface }]}
+          />
+          <Button title="Save price" onPress={saveMealPrice} />
+          <Text style={[styles.helperText, { color: COLORS.textSecondary }]}>Current rate: ৳{mealPrice}</Text>
+        </View>
 
         <Text style={[styles.label, { color: COLORS.textSecondary }]}>Enter text to persist:</Text>
         <TextInput
@@ -85,7 +134,7 @@ export default function PersistenceScreen() {
         </View>
 
         <Text style={[styles.label, { color: COLORS.textSecondary }]}>Last loaded value:</Text>
-        <View style={[styles.preview, { borderColor: COLORS.border, backgroundColor: COLORS.surface }]}>
+        <View style={[styles.preview, { borderColor: COLORS.border, backgroundColor: COLORS.surface }]}> 
           <Text style={{ color: COLORS.text }}>{loaded ?? "(none)"}</Text>
         </View>
       </ScrollView>
@@ -131,5 +180,16 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 10,
     minHeight: 60,
+  },
+  card: {
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 16,
+    gap: 8,
+  },
+  helperText: {
+    fontSize: 13,
+    marginTop: 4,
   },
 });

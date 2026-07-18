@@ -13,6 +13,7 @@ import {
   isMonthCleared as checkMonthCleared,
   deleteMealRecord,
   initMealDatabase,
+  loadClearedMonths,
   loadMealRecords,
   markMonthAsCleared,
   saveMealRecord,
@@ -34,6 +35,7 @@ type MealContextValue = {
   today: Date;
   todayKey: string;
   mealPrice: number;
+  setMealPrice: (price: number) => void;
   records: Record<string, DayMeals & { guestCount?: number }>;
   monthDays: MonthDayRow[];
   totalMeals: number;
@@ -43,6 +45,7 @@ type MealContextValue = {
   activeMonthKey: string;
   isCurrentMonth: boolean;
   isMonthCleared: boolean;
+  clearedMonths: string[];
   getMeals: (key: string) => DayMeals;
   toggleMeal: (key: string, slot: MealSlot) => void;
   setGuestCount: (key: string, guestCount: number) => void;
@@ -68,7 +71,8 @@ export function MealProvider({ children }: { children: ReactNode }) {
   const [isMonthCleared, setIsMonthCleared] = useState(false);
   const todayKey = dateKey(today);
   const [records, setRecords] = useState(() => createInitialRecords(today));
-  const [mealPrice] = useState(DEFAULT_MEAL_PRICE);
+  const [mealPrice, setMealPriceState] = useState(DEFAULT_MEAL_PRICE);
+  const [clearedMonths, setClearedMonths] = useState<string[]>([]);
 
   useEffect(() => {
     let active = true;
@@ -78,10 +82,12 @@ export function MealProvider({ children }: { children: ReactNode }) {
         await initMealDatabase();
         const loadedRecords = await loadMealRecords();
         const cleared = await checkMonthCleared(activeMonthKey);
+        const months = await loadClearedMonths();
 
         if (active) {
           setRecords(() => loadedRecords);
           setIsMonthCleared(cleared);
+          setClearedMonths(months);
         }
       } catch (error) {
         console.warn("Failed to load persisted meal records", error);
@@ -151,7 +157,12 @@ export function MealProvider({ children }: { children: ReactNode }) {
   const clearDueForCurrentMonth = useCallback(async () => {
     await markMonthAsCleared(activeMonthKey);
     setIsMonthCleared(true);
+    setClearedMonths((current) => (current.includes(activeMonthKey) ? current : [...current, activeMonthKey]));
   }, [activeMonthKey]);
+
+  const updateMealPrice = useCallback((price: number) => {
+    setMealPriceState(Math.max(0, price));
+  }, []);
 
   const getMeals = useCallback(
     (key: string) => records[key] ?? createEmptyDayMeals(),
@@ -219,6 +230,7 @@ export function MealProvider({ children }: { children: ReactNode }) {
       today,
       todayKey,
       mealPrice,
+      setMealPrice: updateMealPrice,
       records,
       monthDays,
       totalMeals,
@@ -228,6 +240,7 @@ export function MealProvider({ children }: { children: ReactNode }) {
       activeMonthKey,
       isCurrentMonth,
       isMonthCleared,
+      clearedMonths,
       getMeals,
       toggleMeal,
       setGuestCount,
@@ -250,9 +263,11 @@ export function MealProvider({ children }: { children: ReactNode }) {
       goToPreviousMonth,
       goToNextMonth,
       clearDueForCurrentMonth,
+      updateMealPrice,
       activeMonthKey,
       isCurrentMonth,
       isMonthCleared,
+      clearedMonths,
     ],
   );
 
