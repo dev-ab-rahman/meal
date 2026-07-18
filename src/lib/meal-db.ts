@@ -43,17 +43,19 @@ export async function initMealDatabase() {
       );
     `);
 
-    await db.execAsync(`
-      ALTER TABLE meal_records ADD COLUMN guest_count INTEGER NOT NULL DEFAULT 0;
-    `);
+    try {
+      await db.execAsync(`
+        ALTER TABLE meal_records ADD COLUMN guest_count INTEGER NOT NULL DEFAULT 0;
+      `);
+    } catch (error) {
+      if (!(error instanceof Error && /duplicate column name|already exists/i.test(error.message))) {
+        throw error;
+      }
+    }
 
     await ensureClearedMonthsTable(db);
   } catch (error) {
-    if (error instanceof Error && /duplicate column name|already exists/i.test(error.message)) {
-      console.warn("Guest column already present in meal database");
-    } else {
-      console.warn("Failed to initialize meal database", error);
-    }
+    console.warn("Failed to initialize meal database", error);
   }
 }
 

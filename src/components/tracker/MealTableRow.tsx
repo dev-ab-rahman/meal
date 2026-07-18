@@ -14,8 +14,9 @@ type MealTableRowProps = {
 };
 
 export default function MealTableRow({ row, onToggle }: MealTableRowProps) {
-  const { setGuestCount } = useMealStore();
+  const { setGuestCount, isCurrentMonth } = useMealStore();
   const [modalVisible, setModalVisible] = useState(false);
+  const canEdit = isCurrentMonth && row.isToday;
 
   return (
     <View
@@ -42,7 +43,7 @@ export default function MealTableRow({ row, onToggle }: MealTableRowProps) {
           <MealToggleCell
             slot={slot}
             eaten={row.meals[slot]}
-            disabled={row.isFuture}
+            disabled={row.isFuture || !canEdit}
             onToggle={() => onToggle(row.key, slot)}
           />
         </View>
@@ -51,6 +52,7 @@ export default function MealTableRow({ row, onToggle }: MealTableRowProps) {
       <View className="flex-1">
         <GuestMealCell
           guestCount={row.guestCount}
+          disabled={!canEdit}
           onPress={() => setModalVisible(true)}
         />
       </View>

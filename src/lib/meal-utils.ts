@@ -71,11 +71,12 @@ export function parseDateKey(key: string): Date {
 }
 
 export function buildMonthRows(
-  today: Date,
+  viewDate: Date,
   records: Record<string, DayMeals & { guestCount?: number }>,
+  today: Date = new Date(),
 ): MonthDayRow[] {
-  const year = today.getFullYear();
-  const month = today.getMonth();
+  const year = viewDate.getFullYear();
+  const month = viewDate.getMonth();
 
   return getDaysInMonth(year, month).map((date) => {
     const key = dateKey(date);

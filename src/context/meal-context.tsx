@@ -62,7 +62,8 @@ function createInitialRecords(today: Date): Record<string, DayMeals & { guestCou
 }
 
 export function MealProvider({ children }: { children: ReactNode }) {
-  const [today, setToday] = useState(() => new Date());
+  const [today] = useState(() => new Date());
+  const [viewDate, setViewDate] = useState(() => new Date());
   const [activeMonthKey, setActiveMonthKey] = useState(() => getMonthKey(new Date()));
   const [isMonthCleared, setIsMonthCleared] = useState(false);
   const todayKey = dateKey(today);
@@ -107,8 +108,8 @@ export function MealProvider({ children }: { children: ReactNode }) {
   }, [activeMonthKey, records]);
 
   const monthDays = useMemo(
-    () => buildMonthRows(today, monthRecords),
-    [today, monthRecords],
+    () => buildMonthRows(viewDate, monthRecords, today),
+    [viewDate, monthRecords, today],
   );
 
   const totalMeals = useMemo(
@@ -132,7 +133,7 @@ export function MealProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const goToPreviousMonth = useCallback(() => {
-    setToday((current) => {
+    setViewDate((current) => {
       const previous = new Date(current.getFullYear(), current.getMonth() - 1, 1);
       setActiveMonthKey(getMonthKey(previous));
       return previous;
@@ -140,7 +141,7 @@ export function MealProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const goToNextMonth = useCallback(() => {
-    setToday((current) => {
+    setViewDate((current) => {
       const next = new Date(current.getFullYear(), current.getMonth() + 1, 1);
       setActiveMonthKey(getMonthKey(next));
       return next;
@@ -160,7 +161,9 @@ export function MealProvider({ children }: { children: ReactNode }) {
   const setGuestCount = useCallback(
     (key: string, guestCount: number) => {
       const rowDate = parseDateKey(key);
-      if (isFutureDay(rowDate, today)) {
+      const isEditableDay = activeMonthKey === getMonthKey(today) && key === todayKey;
+
+      if (!isEditableDay || isFutureDay(rowDate, today)) {
         return;
       }
 
@@ -179,13 +182,15 @@ export function MealProvider({ children }: { children: ReactNode }) {
         };
       });
     },
-    [today],
+    [activeMonthKey, today, todayKey],
   );
 
   const toggleMeal = useCallback(
     (key: string, slot: MealSlot) => {
       const rowDate = parseDateKey(key);
-      if (isFutureDay(rowDate, today)) {
+      const isEditableDay = activeMonthKey === getMonthKey(today) && key === todayKey;
+
+      if (!isEditableDay || isFutureDay(rowDate, today)) {
         return;
       }
 
@@ -219,7 +224,7 @@ export function MealProvider({ children }: { children: ReactNode }) {
       totalMeals,
       totalExpense,
       formattedToday: formatTodayDate(today),
-      monthLabel: formatMonthYear(today),
+      monthLabel: formatMonthYear(viewDate),
       activeMonthKey,
       isCurrentMonth,
       isMonthCleared,
