@@ -7,6 +7,9 @@ import StatCard from "@/components/dashboard/StatCard";
 import TodayMealsCard from "@/components/dashboard/TodayMealsCard";
 import { COLORS } from "@/constants/meal";
 import { useDashboard } from "@/hooks/use-dashboard";
+import { getMonthSummary } from "@/lib/meal-db";
+import { getMonthKey } from "@/lib/meal-utils";
+import { useState } from "react";
 
 export default function DashboardScreen() {
   const {
@@ -22,6 +25,10 @@ export default function DashboardScreen() {
     monthLabel,
     clearedMonths,
   } = useDashboard();
+  const [currentMonth,setCurrentMonth] = useState<{
+    totalMeals: number;
+    totalExpense: number;
+  } | null>(null);
 
   const monthCards = Array.from(new Set([activeMonthKey, ...clearedMonths])).map((monthKey) => {
     const [year, month] = monthKey.split("-").map(Number);
@@ -36,6 +43,13 @@ export default function DashboardScreen() {
       status: clearedMonths.includes(monthKey) ? "Paid" : monthKey === activeMonthKey ? "Pending" : "Pending",
     };
   });
+  const currentMonthKey = getMonthKey(new Date());
+
+  async function loadSummary() {
+    const summary = await getMonthSummary(currentMonthKey, mealPrice);
+    setCurrentMonth(summary);
+  }
+  loadSummary();
 
   return (
     <SafeAreaView
@@ -112,13 +126,13 @@ export default function DashboardScreen() {
             <View className="flex-row gap-3">
               <StatCard
                 label="Total Meals"
-                value={String(totalMeals)}
+                value={String(currentMonth?.totalMeals ?? "Wait")}
                 subtitle="Current month"
                 icon={Utensils}
               />
               <StatCard
                 label="Total Expense"
-                value={`৳${totalExpense}`}
+                value={`৳${currentMonth?.totalExpense ?? "Wait"}`}
                 subtitle="Auto calculated"
                 icon={Wallet}
               />

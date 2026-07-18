@@ -210,3 +210,37 @@ export function createEmptyDayMeals(): DayMeals {
 export function toggleMealSlot(meals: DayMeals, slot: MealSlot): DayMeals {
   return { ...meals, [slot]: !meals[slot] };
 }
+
+
+
+export async function getMonthSummary(monthKey: string, mealPrice: number) {
+  try {
+    const db = await openDatabase();
+
+    const row = await db.getFirstAsync<{
+      totalMeals: number;
+    }>(
+      `
+      SELECT
+        SUM(breakfast + lunch + dinner + guest_count) AS totalMeals
+      FROM meal_records
+      WHERE date_key LIKE ?;
+      `,
+      [`${monthKey}%`],
+    );
+
+    const totalMeals = row?.totalMeals ?? 0;
+
+    return {
+      totalMeals,
+      totalExpense: totalMeals * mealPrice,
+    };
+  } catch (error) {
+    console.warn("Failed to get month summary", error);
+
+    return {
+      totalMeals: 0,
+      totalExpense: 0,
+    };
+  }
+}
