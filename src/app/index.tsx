@@ -7,9 +7,9 @@ import StatCard from "@/components/dashboard/StatCard";
 import TodayMealsCard from "@/components/dashboard/TodayMealsCard";
 import { COLORS } from "@/constants/meal";
 import { useDashboard } from "@/hooks/use-dashboard";
-import { getMonthSummary } from "@/lib/meal-db";
+import { getAllMonthsSummary, getMonthSummary } from "@/lib/meal-db";
 import { getMonthKey } from "@/lib/meal-utils";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 export default function DashboardScreen() {
   const {
@@ -25,10 +25,17 @@ export default function DashboardScreen() {
     monthLabel,
     clearedMonths,
   } = useDashboard();
-  const [currentMonth,setCurrentMonth] = useState<{
+  const [currentMonth, setCurrentMonth] = useState<{
     totalMeals: number;
     totalExpense: number;
   } | null>(null);
+  //array type month report
+  const [allMonthsSummary, setAllMonthsSummary] = useState<{
+    monthKey: string;
+    totalMeals: number;
+    totalExpense: number;
+  }[]>([]);
+  console.log("cleared month", clearedMonths);
 
   const monthCards = Array.from(new Set([activeMonthKey, ...clearedMonths])).map((monthKey) => {
     const [year, month] = monthKey.split("-").map(Number);
@@ -45,11 +52,19 @@ export default function DashboardScreen() {
   });
   const currentMonthKey = getMonthKey(new Date());
 
-  async function loadSummary() {
-    const summary = await getMonthSummary(currentMonthKey, mealPrice);
-    setCurrentMonth(summary);
-  }
-  loadSummary();
+  useEffect(() => {
+    async function loadData() {
+      const currentSummary = await getMonthSummary(currentMonthKey, mealPrice);
+      setCurrentMonth(currentSummary);
+
+      const allMonthsSummary = await getAllMonthsSummary(mealPrice);
+      setAllMonthsSummary(allMonthsSummary);
+      console.log(allMonthsSummary);
+    }
+
+    loadData();
+  }, [currentMonthKey, mealPrice]);
+
 
   return (
     <SafeAreaView
@@ -114,67 +129,99 @@ export default function DashboardScreen() {
         >
           This Month
         </Text>
-
-        {isMonthCleared ? (
-          <View className="mb-4 rounded-2xl border border-dashed px-4 py-3" style={{ borderColor: COLORS.border, backgroundColor: COLORS.surface }}>
-            <Text className="text-sm" style={{ color: COLORS.textSecondary }}>
-              This month has been marked as cleared, so its meal summary is hidden from the dashboard.
-            </Text>
+        <View>
+          <View className="flex-row gap-3">
+            <StatCard
+              label="Total Meals"
+              value={String(currentMonth?.totalMeals ?? "Wait")}
+              subtitle="Current month"
+              icon={Utensils}
+            />
+            <StatCard
+              label="Total Expense"
+              value={`৳${currentMonth?.totalExpense ?? "Wait"}`}
+              subtitle="Auto calculated"
+              icon={Wallet}
+            />
           </View>
-        ) : (
-          <View>
-            <View className="flex-row gap-3">
-              <StatCard
-                label="Total Meals"
-                value={String(currentMonth?.totalMeals ?? "Wait")}
-                subtitle="Current month"
-                icon={Utensils}
-              />
-              <StatCard
-                label="Total Expense"
-                value={`৳${currentMonth?.totalExpense ?? "Wait"}`}
-                subtitle="Auto calculated"
-                icon={Wallet}
-              />
-            </View>
 
-            <View className="mt-3">
-              <StatCard
-                label="Meal Price"
-                value={`৳${mealPrice}`}
-                subtitle="Per meal · change in Settings"
-                icon={CircleDollarSign}
-              />
+          <View className="mt-3">
+            <StatCard
+              label="Meal Price"
+              value={`৳${mealPrice}`}
+              subtitle="Per meal · change in Settings"
+              icon={CircleDollarSign}
+            />
+          </View>
+        </View>
+
+        {allMonthsSummary.length > 0 && (
+          <View
+            className="mt-4 rounded-2xl border px-4 py-3"
+            style={{
+              borderColor: COLORS.border,
+              backgroundColor: COLORS.surface,
+            }}
+          >
+            <Text
+              className="text-sm font-semibold"
+              style={{ color: COLORS.text }}
+            >
+              Monthly cards
+            </Text>
+
+            <View className="mt-2 gap-2">
+              {allMonthsSummary.map((month) => {
+                const isPaid = clearedMonths.includes(month.monthKey);
+
+                return (
+                  <View
+                    key={month.monthKey}
+                    className="flex-row items-center justify-between rounded-xl border px-3 py-2.5"
+                    style={{
+                      borderColor: COLORS.border,
+                      backgroundColor: COLORS.background,
+                    }}
+                  >
+                    <View>
+                      <Text
+                        className="text-sm font-semibold"
+                        style={{ color: COLORS.text }}
+                      >
+                        {month.monthKey}
+                      </Text>
+
+                      <Text
+                        className="text-xs"
+                        style={{ color: COLORS.textSecondary }}
+                      >
+                        {month.totalMeals} meals • ৳{month.totalExpense}
+                      </Text>
+                    </View>
+
+                    <View
+                      className="rounded-full px-2.5 py-1"
+                      style={{
+                        backgroundColor: isPaid
+                          ? "rgba(16,185,129,0.16)"
+                          : "rgba(245,158,11,0.16)",
+                      }}
+                    >
+                      <Text
+                        className="text-xs font-semibold"
+                        style={{
+                          color: isPaid ? COLORS.accent : "#f59e0b",
+                        }}
+                      >
+                        {isPaid ? "Paid" : "Pending"}
+                      </Text>
+                    </View>
+                  </View>
+                );
+              })}
             </View>
           </View>
         )}
-
-        {monthCards.length > 0 ? (
-          <View className="mt-4 rounded-2xl border px-4 py-3" style={{ borderColor: COLORS.border, backgroundColor: COLORS.surface }}>
-            <Text className="text-sm font-semibold" style={{ color: COLORS.text }}>
-              Monthly cards
-            </Text>
-            <View className="mt-2 gap-2">
-              {monthCards.map((month) => (
-                <View key={month.key} className="flex-row items-center justify-between rounded-xl border px-3 py-2.5" style={{ borderColor: COLORS.border, backgroundColor: COLORS.background }}>
-                  <View>
-                    <Text className="text-sm font-semibold" style={{ color: COLORS.text }}>
-                      {month.label}
-                    </Text>
-                    <Text className="text-xs" style={{ color: COLORS.textSecondary }}>
-                      {month.key === activeMonthKey ? monthLabel : month.label}
-                    </Text>
-                  </View>
-                  <View className="rounded-full px-2.5 py-1" style={{ backgroundColor: month.status === "Paid" ? "rgba(16,185,129,0.16)" : "rgba(245,158,11,0.16)" }}>
-                    <Text className="text-xs font-semibold" style={{ color: month.status === "Paid" ? COLORS.accent : "#f59e0b" }}>
-                      {month.status}
-                    </Text>
-                  </View>
-                </View>
-              ))}
-            </View>
-          </View>
-        ) : null}
       </ScrollView>
     </SafeAreaView>
   );

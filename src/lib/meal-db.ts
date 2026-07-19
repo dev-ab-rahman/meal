@@ -244,3 +244,32 @@ export async function getMonthSummary(monthKey: string, mealPrice: number) {
     };
   }
 }
+
+export async function getAllMonthsSummary(mealPrice: number) {
+  try {
+    const db = await openDatabase();
+
+    const rows = await db.getAllAsync<{
+      month_key: string;
+      totalMeals: number;
+    }>(
+      `
+      SELECT
+        SUBSTR(date_key, 1, 7) AS month_key,
+        SUM(breakfast + lunch + dinner + guest_count) AS totalMeals
+      FROM meal_records
+      GROUP BY month_key
+      ORDER BY month_key ASC;
+      `,
+    );
+
+    return rows.map((row) => ({
+      monthKey: row.month_key,
+      totalMeals: row.totalMeals ?? 0,
+      totalExpense: (row.totalMeals ?? 0) * mealPrice,
+    }));
+  } catch (error) {
+    console.warn("Failed to get all months summary", error);
+    return [];
+  }
+}
